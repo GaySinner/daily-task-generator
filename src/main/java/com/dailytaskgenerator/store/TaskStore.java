@@ -79,6 +79,7 @@ public class TaskStore
 		set.setTasks(set.getTasks() == null ? new ArrayList<>() : set.getTasks().stream()
 			.filter(t -> t != null && t.getId() != null && t.getType() != null)
 			.filter(t -> t.getType() != TaskType.SKILL || t.getSkill() != null)
+			.filter(t -> t.getType() != TaskType.QUEST || t.getQuest() != null)
 			.collect(Collectors.toCollection(ArrayList::new)));
 		return set;
 	}

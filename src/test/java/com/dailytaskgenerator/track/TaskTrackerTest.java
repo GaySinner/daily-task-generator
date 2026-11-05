@@ -9,6 +9,8 @@ import com.dailytaskgenerator.model.TaskType;
 import com.dailytaskgenerator.player.PlayerSnapshot;
 import java.util.Map;
 import java.util.List;
+import net.runelite.api.Quest;
+import net.runelite.api.QuestState;
 import net.runelite.api.Skill;
 import org.junit.Test;
 
@@ -60,5 +62,20 @@ public class TaskTrackerTest
 		assertEquals(500, s.getTasks().get(0).getProgressXp());
 		assertTrue(s.getTasks().get(0).isCompleted());
 		assertFalse(TaskTracker.sync(s, snap));
+	}
+
+	@Test
+	public void questCompletesWhenFinished()
+	{
+		DailyTask q = new DailyTask();
+		q.setId("quest:DORICS_QUEST");
+		q.setType(TaskType.QUEST);
+		q.setQuest(Quest.DORICS_QUEST);
+		DailyTaskSet s = new DailyTaskSet();
+		s.setTasks(new java.util.ArrayList<>(List.of(q)));
+
+		assertFalse(TaskTracker.onQuestStates(s, Map.of(Quest.DORICS_QUEST, QuestState.IN_PROGRESS)));
+		assertTrue(TaskTracker.onQuestStates(s, Map.of(Quest.DORICS_QUEST, QuestState.FINISHED)));
+		assertTrue(q.isCompleted());
 	}
 }

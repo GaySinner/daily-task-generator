@@ -1,9 +1,12 @@
 package com.dailytaskgenerator;
 
+import com.dailytaskgenerator.data.QuestRequirementLoader;
+import com.dailytaskgenerator.generate.QuestTaskProvider;
 import com.dailytaskgenerator.generate.SkillTaskProvider;
 import com.dailytaskgenerator.generate.TaskGenerator;
 import com.dailytaskgenerator.model.DailyTask;
 import com.dailytaskgenerator.model.DailyTaskSet;
+import com.dailytaskgenerator.model.TaskType;
 import com.dailytaskgenerator.player.PlayerSnapshot;
 import com.dailytaskgenerator.player.PlayerSnapshotBuilder;
 import com.dailytaskgenerator.store.TaskStore;
@@ -16,7 +19,10 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,9 +32,12 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.MenuAction;
+import net.runelite.api.Quest;
+import net.runelite.api.QuestState;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
@@ -74,6 +83,12 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	private SkillTaskProvider skillTaskProvider;
 
 	@Inject
+	private QuestTaskProvider questTaskProvider;
+
+	@Inject
+	private QuestRequirementLoader questRequirementLoader;
+
+	@Inject
 	private TaskStore taskStore;
 
 	private TaskGenerator generator;
@@ -85,11 +100,18 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	private DailyTaskSet taskSet;
 	private long accountHash = -1;
 	private boolean refreshPending;
+	private boolean questCheckPending;
+	private int ticksSinceQuestCheck;
+
+	/**
+	 * Minimum ticks between quest-state checks; each check runs one client script per quest task.
+	 */
+	private static final int QUEST_CHECK_INTERVAL = 5;
 
 	@Override
 	protected void startUp()
 	{
-		generator = new TaskGenerator(List.of(skillTaskProvider));
+		generator = new TaskGenerator(List.of(skillTaskProvider, questTaskProvider));
 		settingsLink = new SettingsLink(this);
 		panel = new DailyTaskPanel(this);
 
@@ -122,6 +144,8 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		taskSet = null;
 		accountHash = -1;
 		refreshPending = false;
+		questCheckPending = false;
+		questTaskProvider.setRequirements(Collections.emptyMap());
 	}
 
 	@Subscribe
@@ -152,10 +176,15 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	@Subscribe
 	public void onGameTick(GameTick tick)
 	{
+		ticksSinceQuestCheck++;
 		if (refreshPending)
 		{
 			refreshPending = false;
 			refresh();
+		}
+		else if (questCheckPending && ticksSinceQuestCheck >= QUEST_CHECK_INTERVAL)
+		{
+			checkQuestTasks();
 		}
 		else if (taskSet != null && !today().equals(taskSet.getDate()))
 		{
@@ -171,6 +200,36 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
 			refreshPending = true;
+		}
+	}
+
+	@Subscribe
+	public void onVarbitChanged(VarbitChanged event)
+	{
+		// Quest progress is stored in varps/varbits. Just flag it; the check happens on a tick.
+		questCheckPending = true;
+	}
+
+	private void checkQuestTasks()
+	{
+		questCheckPending = false;
+		ticksSinceQuestCheck = 0;
+		if (taskSet == null)
+		{
+			return;
+		}
+		Map<Quest, QuestState> states = new EnumMap<>(Quest.class);
+		for (DailyTask task : taskSet.getTasks())
+		{
+			if (task.getType() == TaskType.QUEST && task.getQuest() != null && !task.isCompleted())
+			{
+				states.put(task.getQuest(), task.getQuest().getState(client));
+			}
+		}
+		if (!states.isEmpty() && TaskTracker.onQuestStates(taskSet, states))
+		{
+			save();
+			pushToPanel();
 		}
 	}
 
@@ -209,6 +268,12 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 			// Profile isn't set for this account yet; try again next tick.
 			refreshPending = true;
 			return;
+		}
+
+		if (!questTaskProvider.hasRequirements())
+		{
+			// Cache data is only available once logged in; it doesn't change, so load it once.
+			questTaskProvider.setRequirements(questRequirementLoader.load());
 		}
 
 		PlayerSnapshot snapshot = snapshotBuilder.build();

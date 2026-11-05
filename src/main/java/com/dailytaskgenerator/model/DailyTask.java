@@ -2,6 +2,7 @@ package com.dailytaskgenerator.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.runelite.api.Quest;
 import net.runelite.api.Skill;
 
 /**
@@ -25,6 +26,9 @@ public class DailyTask
 	private int baselineXp;
 	private int targetXp;
 	private int progressXp;
+
+	// Quest tasks
+	private Quest quest;
 
 	/**
 	 * Completed because the game state showed it.
@@ -56,6 +60,7 @@ public class DailyTask
 		t.baselineXp = baselineXp;
 		t.targetXp = targetXp;
 		t.progressXp = progressXp;
+		t.quest = quest;
 		t.completed = completed;
 		t.manuallyCompleted = manuallyCompleted;
 		return t;

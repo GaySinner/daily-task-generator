@@ -4,6 +4,9 @@ import com.dailytaskgenerator.model.DailyTask;
 import com.dailytaskgenerator.model.DailyTaskSet;
 import com.dailytaskgenerator.model.TaskType;
 import com.dailytaskgenerator.player.PlayerSnapshot;
+import java.util.Map;
+import net.runelite.api.Quest;
+import net.runelite.api.QuestState;
 import net.runelite.api.Skill;
 
 public final class TaskTracker
@@ -25,6 +28,27 @@ public final class TaskTracker
 			if (task.getType() == TaskType.SKILL && task.getSkill() != null)
 			{
 				changed |= onXp(set, task.getSkill(), snapshot.getXp(task.getSkill()));
+			}
+		}
+		changed |= onQuestStates(set, snapshot.getQuestStates());
+		return changed;
+	}
+
+	/**
+	 * Marks quest tasks complete once the quest is finished.
+	 *
+	 * @return true if any task changed
+	 */
+	public static boolean onQuestStates(DailyTaskSet set, Map<Quest, QuestState> states)
+	{
+		boolean changed = false;
+		for (DailyTask task : set.getTasks())
+		{
+			if (task.getType() == TaskType.QUEST && !task.isCompleted() && task.getQuest() != null
+				&& states.get(task.getQuest()) == QuestState.FINISHED)
+			{
+				task.setCompleted(true);
+				changed = true;
 			}
 		}
 		return changed;

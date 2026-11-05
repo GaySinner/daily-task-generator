@@ -20,6 +20,13 @@ public interface DailyTaskGeneratorConfig extends Config
 	)
 	String skillSection = "skillSection";
 
+	@ConfigSection(
+		name = "Quest tasks",
+		description = "Settings for quest tasks",
+		position = 20
+	)
+	String questSection = "questSection";
+
 	@Range(min = 1, max = 10)
 	@ConfigItem(
 		keyName = "tasksPerDay",
@@ -90,5 +97,17 @@ public interface DailyTaskGeneratorConfig extends Config
 	default boolean includeMaxedSkills()
 	{
 		return false;
+	}
+
+	@ConfigItem(
+		keyName = "questTasks",
+		name = "Enable quest tasks",
+		description = "Suggest quests and miniquests you meet the requirements for",
+		section = questSection,
+		position = 21
+	)
+	default boolean questTasks()
+	{
+		return true;
 	}
 }
