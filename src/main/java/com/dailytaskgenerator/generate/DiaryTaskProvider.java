@@ -28,12 +28,6 @@ public class DiaryTaskProvider implements TaskProvider
 	}
 
 	@Override
-	public TaskType getType()
-	{
-		return TaskType.DIARY;
-	}
-
-	@Override
 	public boolean isEnabled()
 	{
 		return config.diaryTasks();

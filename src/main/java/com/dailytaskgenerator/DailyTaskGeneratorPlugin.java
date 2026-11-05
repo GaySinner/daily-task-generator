@@ -10,7 +10,9 @@ import com.dailytaskgenerator.generate.SkillTaskProvider;
 import com.dailytaskgenerator.generate.TaskGenerator;
 import com.dailytaskgenerator.model.DailyTask;
 import com.dailytaskgenerator.model.DailyTaskSet;
+import com.dailytaskgenerator.model.Streak;
 import com.dailytaskgenerator.model.TaskType;
+import com.dailytaskgenerator.notify.TaskNotifier;
 import com.dailytaskgenerator.player.PlayerSnapshot;
 import com.dailytaskgenerator.player.PlayerSnapshotBuilder;
 import com.dailytaskgenerator.store.TaskStore;
@@ -104,6 +106,9 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	@Inject
 	private TaskStore taskStore;
 
+	@Inject
+	private TaskNotifier notifier;
+
 	private TaskGenerator generator;
 	private DailyTaskPanel panel;
 	private NavigationButton navButton;
@@ -111,6 +116,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 
 	// Client-thread state
 	private DailyTaskSet taskSet;
+	private Streak streak = new Streak();
 	private long accountHash = -1;
 	private boolean refreshPending;
 	private boolean questCheckPending;
@@ -154,7 +160,9 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		settingsLink = null;
 		panel = null;
 		generator = null;
+		notifier.reset();
 		taskSet = null;
+		streak = new Streak();
 		accountHash = -1;
 		refreshPending = false;
 		questCheckPending = false;
@@ -172,7 +180,9 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 				refreshPending = true;
 				break;
 			case LOGIN_SCREEN:
+				notifier.reset();
 				taskSet = null;
+				streak = new Streak();
 				accountHash = -1;
 				SwingUtilities.invokeLater(() ->
 				{
@@ -191,6 +201,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	public void onGameTick(GameTick tick)
 	{
 		ticksSinceQuestCheck++;
+		notifier.tick();
 		if (refreshPending)
 		{
 			refreshPending = false;
@@ -227,6 +238,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		{
 			return;
 		}
+		CompletionCheck check = new CompletionCheck();
 		boolean changed = false;
 		if (isCaCompletionVarp(event.getVarpId()))
 		{
@@ -238,8 +250,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		}
 		if (changed)
 		{
-			save();
-			pushToPanel();
+			afterCompletionCheck(check);
 		}
 	}
 
@@ -263,6 +274,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		{
 			return;
 		}
+		CompletionCheck check = new CompletionCheck();
 		Map<Quest, QuestState> states = new EnumMap<>(Quest.class);
 		for (DailyTask task : taskSet.getTasks())
 		{
@@ -273,8 +285,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		}
 		if (!states.isEmpty() && TaskTracker.onQuestStates(taskSet, states))
 		{
-			save();
-			pushToPanel();
+			afterCompletionCheck(check);
 		}
 	}
 
@@ -285,15 +296,18 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		{
 			return;
 		}
-		long doneBefore = taskSet.completedCount();
+		CompletionCheck check = new CompletionCheck();
 		if (TaskTracker.onXp(taskSet, event.getSkill(), event.getXp()))
 		{
 			// Progress itself is recomputed from XP on load, so only completions need saving.
-			if (taskSet.completedCount() != doneBefore)
+			if (check.anyNewlyCompleted())
 			{
-				save();
+				afterCompletionCheck(check);
 			}
-			pushToPanel();
+			else
+			{
+				pushToPanel();
+			}
 		}
 	}
 
@@ -333,21 +347,77 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		}
 
 		accountHash = snapshot.getAccountHash();
+		streak = taskStore.loadStreak();
 		DailyTaskSet saved = taskStore.load();
 		if (saved != null && today().equals(saved.getDate()))
 		{
 			taskSet = saved;
+			log.debug("Loaded {} saved tasks for {}", saved.getTasks().size(), saved.getDate());
+			// Tasks finished while logged out (e.g. on mobile) complete now, with the usual messages.
+			CompletionCheck check = new CompletionCheck();
 			if (TaskTracker.sync(taskSet, snapshot))
 			{
-				save();
+				afterCompletionCheck(check);
 			}
-			log.debug("Loaded {} saved tasks for {}", saved.getTasks().size(), saved.getDate());
-			pushToPanel();
+			else
+			{
+				pushToPanel();
+			}
 		}
 		else
 		{
 			generateNewSet(snapshot);
 		}
+	}
+
+	/**
+	 * Snapshot of which tasks were done before a change, so the change can be compared against it.
+	 */
+	private final class CompletionCheck
+	{
+		private final Set<String> doneBefore = taskSet.getTasks().stream()
+			.filter(DailyTask::isDone).map(DailyTask::getId).collect(Collectors.toSet());
+		private final boolean allDoneBefore = allDone();
+
+		boolean anyNewlyCompleted()
+		{
+			return taskSet.getTasks().stream().anyMatch(t -> t.isDone() && !doneBefore.contains(t.getId()));
+		}
+	}
+
+	private boolean allDone()
+	{
+		return taskSet != null && !taskSet.getTasks().isEmpty() && taskSet.getTasks().stream().allMatch(DailyTask::isDone);
+	}
+
+	/**
+	 * Call after anything that may have completed tasks: announces newly completed tasks (ticked
+	 * ones only if that setting is on), records the streak when the last task is finished, then
+	 * saves and refreshes the panel.
+	 */
+	private void afterCompletionCheck(CompletionCheck check)
+	{
+		int total = taskSet.getTasks().size();
+		for (DailyTask task : taskSet.getTasks())
+		{
+			boolean announce = task.isCompleted() || config.announceTickedTasks();
+			if (announce && task.isDone() && !check.doneBefore.contains(task.getId()))
+			{
+				notifier.taskCompleted(task.getTitle(), taskSet.completedCount(), total);
+			}
+		}
+		if (!check.allDoneBefore && allDone() && today().equals(taskSet.getDate()))
+		{
+			Streak updated = streak.record(taskSet.getDate());
+			if (updated != streak)
+			{
+				streak = updated;
+				taskStore.saveStreak(streak);
+				notifier.allCompleted(streak.getCurrent());
+			}
+		}
+		save();
+		pushToPanel();
 	}
 
 	private void save()
@@ -387,11 +457,13 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		}
 		DailyTaskSet copy = taskSet.copy();
 		int rerolls = rerollsLeft();
+		int currentStreak = streak.currentAsOf(today());
+		int bestStreak = streak.getBest();
 		SwingUtilities.invokeLater(() ->
 		{
 			if (panel != null)
 			{
-				panel.showTasks(copy, rerolls);
+				panel.showTasks(copy, rerolls, currentStreak, bestStreak);
 			}
 		});
 	}
@@ -415,11 +487,11 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 			{
 				return;
 			}
+			CompletionCheck check = new CompletionCheck();
 			taskSet.getTasks().stream()
 				.filter(t -> t.getId().equals(taskId))
 				.forEach(t -> t.setManuallyCompleted(done));
-			save();
-			pushToPanel();
+			afterCompletionCheck(check);
 		});
 	}
 

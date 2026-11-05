@@ -34,12 +34,6 @@ public class CombatAchievementTaskProvider implements TaskProvider
 	}
 
 	@Override
-	public TaskType getType()
-	{
-		return TaskType.COMBAT_ACHIEVEMENT;
-	}
-
-	@Override
 	public boolean isEnabled()
 	{
 		return config.caTasks();

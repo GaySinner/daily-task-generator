@@ -75,12 +75,6 @@ public class TaskGeneratorTest
 		return new TaskProvider()
 		{
 			@Override
-			public com.dailytaskgenerator.model.TaskType getType()
-			{
-				return type;
-			}
-
-			@Override
 			public boolean isEnabled()
 			{
 				return true;

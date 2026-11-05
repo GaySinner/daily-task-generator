@@ -43,12 +43,6 @@ public class QuestTaskProvider implements TaskProvider
 	}
 
 	@Override
-	public TaskType getType()
-	{
-		return TaskType.QUEST;
-	}
-
-	@Override
 	public boolean isEnabled()
 	{
 		return config.questTasks();

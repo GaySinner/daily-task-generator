@@ -2,9 +2,12 @@ package com.dailytaskgenerator.store;
 
 import com.dailytaskgenerator.DailyTaskGeneratorConfig;
 import com.dailytaskgenerator.model.DailyTaskSet;
+import com.dailytaskgenerator.model.Streak;
 import com.dailytaskgenerator.model.TaskType;
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -22,6 +25,7 @@ import net.runelite.client.config.ConfigManager;
 public class TaskStore
 {
 	static final String TASK_SET_KEY = "taskSet";
+	static final String STREAK_KEY = "streak";
 
 	private final ConfigManager configManager;
 	private final Gson gson;
@@ -52,6 +56,39 @@ public class TaskStore
 	public void save(DailyTaskSet set)
 	{
 		configManager.setRSProfileConfiguration(DailyTaskGeneratorConfig.GROUP, TASK_SET_KEY, gson.toJson(set));
+	}
+
+	public Streak loadStreak()
+	{
+		return parseStreak(gson, configManager.getRSProfileConfiguration(DailyTaskGeneratorConfig.GROUP, STREAK_KEY));
+	}
+
+	public void saveStreak(Streak streak)
+	{
+		configManager.setRSProfileConfiguration(DailyTaskGeneratorConfig.GROUP, STREAK_KEY, gson.toJson(streak));
+	}
+
+	static Streak parseStreak(Gson gson, @Nullable String json)
+	{
+		if (json == null || json.isEmpty())
+		{
+			return new Streak();
+		}
+		try
+		{
+			Streak streak = gson.fromJson(json, Streak.class);
+			if (streak != null && streak.getLastDate() != null)
+			{
+				// Throws if the date is unreadable, which falls through to a fresh streak.
+				LocalDate.parse(streak.getLastDate());
+			}
+			return streak == null ? new Streak() : streak;
+		}
+		catch (JsonParseException | DateTimeParseException e)
+		{
+			log.debug("Discarding unreadable saved streak", e);
+			return new Streak();
+		}
 	}
 
 	@Nullable

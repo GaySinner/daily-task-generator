@@ -28,6 +28,7 @@ public class DailyTaskPanel extends PluginPanel
 	private final TaskActions actions;
 	private final JLabel summary = new JLabel();
 	private final JLabel subtitle = new JLabel();
+	private final JLabel streakLabel = new JLabel();
 	private final JPanel taskList = new JPanel(new GridBagLayout());
 	private final JButton regenerate = new JButton("Regenerate all");
 
@@ -42,6 +43,8 @@ public class DailyTaskPanel extends PluginPanel
 		summary.setFont(FontManager.getRunescapeSmallFont());
 		subtitle.setFont(FontManager.getRunescapeSmallFont());
 		subtitle.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		streakLabel.setFont(FontManager.getRunescapeSmallFont());
+		streakLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 
 		BufferedImage gear = ImageUtil.loadImageResource(DailyTaskPanel.class, "/com/dailytaskgenerator/settings.png");
 		JButton settings = new JButton(new ImageIcon(gear));
@@ -58,6 +61,7 @@ public class DailyTaskPanel extends PluginPanel
 		header.add(titleRow);
 		header.add(summary);
 		header.add(subtitle);
+		header.add(streakLabel);
 		add(header, BorderLayout.NORTH);
 
 		add(taskList, BorderLayout.CENTER);
@@ -69,18 +73,25 @@ public class DailyTaskPanel extends PluginPanel
 		showLoggedOut();
 	}
 
+	private static String days(int n)
+	{
+		return n == 1 ? "1 day" : n + " days";
+	}
+
 	public void showLoggedOut()
 	{
 		summary.setText("Log in to generate tasks.");
 		subtitle.setText(" ");
+		streakLabel.setText(" ");
 		regenerate.setVisible(false);
 		taskList.removeAll();
 		revalidate();
 		repaint();
 	}
 
-	public void showTasks(DailyTaskSet set, int rerollsLeft)
+	public void showTasks(DailyTaskSet set, int rerollsLeft, int streak, int bestStreak)
 	{
+		streakLabel.setText("Streak: " + days(streak) + (bestStreak > streak ? " · best " + days(bestStreak) : ""));
 		int total = set.getTasks().size();
 		summary.setText(set.completedCount() + " / " + total + " complete");
 		subtitle.setText(set.getDate() + " · resets 00:00 UTC · " + rerollsLeft + " reroll" + (rerollsLeft == 1 ? "" : "s") + " left");

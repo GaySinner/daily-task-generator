@@ -34,12 +34,6 @@ public class SkillTaskProvider implements TaskProvider
 	}
 
 	@Override
-	public TaskType getType()
-	{
-		return TaskType.SKILL;
-	}
-
-	@Override
 	public boolean isEnabled()
 	{
 		return config.skillTasks();

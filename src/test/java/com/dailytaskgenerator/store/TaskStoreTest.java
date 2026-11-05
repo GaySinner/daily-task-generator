@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import com.dailytaskgenerator.model.DailyTask;
 import com.dailytaskgenerator.model.DailyTaskSet;
+import com.dailytaskgenerator.model.Streak;
 import com.dailytaskgenerator.model.TaskType;
 import com.google.gson.Gson;
 import java.util.ArrayList;
@@ -69,5 +70,15 @@ public class TaskStoreTest
 	{
 		DailyTaskSet set = TaskStore.parse(gson, "{\"date\":\"2026-11-05\",\"tasks\":null}");
 		assertTrue(set.getTasks().isEmpty());
+	}
+
+	@Test
+	public void streakRoundTripsAndToleratesBadData()
+	{
+		Streak streak = new Streak(4, 9, "2026-11-05");
+		assertEquals(streak, TaskStore.parseStreak(gson, gson.toJson(streak)));
+		assertEquals(new Streak(), TaskStore.parseStreak(gson, null));
+		assertEquals(new Streak(), TaskStore.parseStreak(gson, "{bad"));
+		assertEquals(new Streak(), TaskStore.parseStreak(gson, "{\"current\":2,\"lastDate\":\"yesterday\"}"));
 	}
 }

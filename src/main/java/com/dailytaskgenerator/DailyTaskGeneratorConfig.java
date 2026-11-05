@@ -4,6 +4,7 @@ import com.dailytaskgenerator.data.CombatAchievementTier;
 import com.dailytaskgenerator.data.DiaryTier;
 import com.dailytaskgenerator.generate.SkillEffort;
 import com.dailytaskgenerator.generate.SkillSelection;
+import com.dailytaskgenerator.notify.CompletionMessage;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -32,14 +33,14 @@ public interface DailyTaskGeneratorConfig extends Config
 	@ConfigSection(
 		name = "Combat achievement tasks",
 		description = "Settings for combat achievement tasks",
-		position = 30
+		position = 40
 	)
 	String caSection = "caSection";
 
 	@ConfigSection(
 		name = "Achievement diary tasks",
 		description = "Settings for achievement diary tasks",
-		position = 40
+		position = 30
 	)
 	String diarySection = "diarySection";
 
@@ -65,6 +66,30 @@ public interface DailyTaskGeneratorConfig extends Config
 	default int rerollsPerDay()
 	{
 		return 3;
+	}
+
+	@ConfigItem(
+		keyName = "completionMessage",
+		name = "Completion message",
+		description = "How to tell you when a task is completed: a chat message, the game's pop-up banner"
+			+ " (like a new collection log item), both, or neither. Only you can see these.",
+		position = 3
+	)
+	default CompletionMessage completionMessage()
+	{
+		return CompletionMessage.CHAT;
+	}
+
+	@ConfigItem(
+		keyName = "announceTickedTasks",
+		name = "Announce ticked tasks",
+		description = "Also send the completion message when you tick a task's Done box yourself,"
+			+ " not just when the game confirms it",
+		position = 4
+	)
+	default boolean announceTickedTasks()
+	{
+		return false;
 	}
 
 	@ConfigItem(
@@ -132,7 +157,7 @@ public interface DailyTaskGeneratorConfig extends Config
 		name = "Enable combat achievements",
 		description = "Suggest combat achievement tasks you haven't completed (members worlds only)",
 		section = caSection,
-		position = 31
+		position = 41
 	)
 	default boolean caTasks()
 	{
@@ -144,7 +169,7 @@ public interface DailyTaskGeneratorConfig extends Config
 		name = "Hardest tier",
 		description = "The hardest combat achievement tier to suggest tasks from",
 		section = caSection,
-		position = 32
+		position = 42
 	)
 	default CombatAchievementTier caMaxTier()
 	{
@@ -156,7 +181,7 @@ public interface DailyTaskGeneratorConfig extends Config
 		name = "Enable diaries",
 		description = "Suggest the next unfinished achievement diary tier in each region (members worlds only)",
 		section = diarySection,
-		position = 41
+		position = 31
 	)
 	default boolean diaryTasks()
 	{
@@ -168,7 +193,7 @@ public interface DailyTaskGeneratorConfig extends Config
 		name = "Hardest tier",
 		description = "The hardest achievement diary tier to suggest",
 		section = diarySection,
-		position = 42
+		position = 32
 	)
 	default DiaryTier diaryMaxTier()
 	{

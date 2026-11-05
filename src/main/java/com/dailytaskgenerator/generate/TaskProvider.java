@@ -1,13 +1,10 @@
 package com.dailytaskgenerator.generate;
 
-import com.dailytaskgenerator.model.TaskType;
 import com.dailytaskgenerator.player.PlayerSnapshot;
 import java.util.List;
 
 public interface TaskProvider
 {
-	TaskType getType();
-
 	boolean isEnabled();
 
 	/**
