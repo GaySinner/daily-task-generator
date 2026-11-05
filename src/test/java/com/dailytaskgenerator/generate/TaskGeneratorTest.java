@@ -69,4 +69,62 @@ public class TaskGeneratorTest
 	{
 		assertNotEquals(TaskGenerator.seed(42L, "2026-11-05", 0), TaskGenerator.seed(42L, "2026-11-05", 1));
 	}
+
+	private static TaskProvider fixedProvider(com.dailytaskgenerator.model.TaskType type)
+	{
+		return new TaskProvider()
+		{
+			@Override
+			public com.dailytaskgenerator.model.TaskType getType()
+			{
+				return type;
+			}
+
+			@Override
+			public boolean isEnabled()
+			{
+				return true;
+			}
+
+			@Override
+			public List<TaskCandidate> candidates(PlayerSnapshot snapshot)
+			{
+				List<TaskCandidate> out = new java.util.ArrayList<>();
+				for (int i = 0; i < 20; i++)
+				{
+					DailyTask t = new DailyTask();
+					t.setId(type + ":" + i);
+					t.setType(type);
+					out.add(new TaskCandidate(t, 1));
+				}
+				return out;
+			}
+		};
+	}
+
+	@Test
+	public void consecutiveRerollsSpreadAcrossCategories()
+	{
+		// Regression: nearby seeds made the first pick land in the same category every reroll.
+		List<TaskProvider> providers = new java.util.ArrayList<>();
+		for (com.dailytaskgenerator.model.TaskType type : com.dailytaskgenerator.model.TaskType.values())
+		{
+			providers.add(fixedProvider(type));
+		}
+		TaskGenerator g = new TaskGenerator(providers);
+
+		java.util.Map<com.dailytaskgenerator.model.TaskType, Integer> firstPicks = new java.util.EnumMap<>(com.dailytaskgenerator.model.TaskType.class);
+		int rerolls = 400;
+		for (int reroll = 0; reroll < rerolls; reroll++)
+		{
+			DailyTask first = g.generate(snapshot, 1, TaskGenerator.seed(53590184267154L, "2026-11-05", reroll)).get(0);
+			firstPicks.merge(first.getType(), 1, Integer::sum);
+		}
+		for (com.dailytaskgenerator.model.TaskType type : com.dailytaskgenerator.model.TaskType.values())
+		{
+			int n = firstPicks.getOrDefault(type, 0);
+			// Expect about 100 each; allow a wide margin so this never flakes.
+			assertTrue(type + " picked first " + n + " times", n > 60 && n < 140);
+		}
+	}
 }

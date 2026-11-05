@@ -5,7 +5,6 @@ import com.dailytaskgenerator.player.PlayerSnapshot;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.ToDoubleFunction;
@@ -24,9 +23,26 @@ public class TaskGenerator
 		this.providers = providers;
 	}
 
+	/**
+	 * Seeds must be well spread: {@link Random}'s first outputs barely change between nearby seeds,
+	 * so seeds one reroll apart would otherwise keep picking the same category.
+	 */
 	public static long seed(long accountHash, String date, int rerollCount)
 	{
-		return Objects.hash(accountHash, date, rerollCount);
+		long h = mix(accountHash);
+		h = mix(h ^ date.hashCode());
+		return mix(h ^ rerollCount);
+	}
+
+	/**
+	 * SplitMix64 finalizer.
+	 */
+	private static long mix(long z)
+	{
+		z += 0x9E3779B97F4A7C15L;
+		z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+		z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+		return z ^ (z >>> 31);
 	}
 
 	public List<DailyTask> generate(PlayerSnapshot snapshot, int count, long seed)
