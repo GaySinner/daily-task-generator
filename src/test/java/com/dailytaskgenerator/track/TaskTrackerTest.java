@@ -6,6 +6,8 @@ import static org.junit.Assert.assertTrue;
 import com.dailytaskgenerator.model.DailyTask;
 import com.dailytaskgenerator.model.DailyTaskSet;
 import com.dailytaskgenerator.model.TaskType;
+import com.dailytaskgenerator.player.PlayerSnapshot;
+import java.util.Map;
 import java.util.List;
 import net.runelite.api.Skill;
 import org.junit.Test;
@@ -45,5 +47,18 @@ public class TaskTrackerTest
 		assertFalse(TaskTracker.onXp(s, Skill.FISHING, 5000));
 		assertFalse(TaskTracker.onXp(s, Skill.MINING, 0));
 		assertEquals(0, s.getTasks().get(0).getProgressXp());
+	}
+
+	@Test
+	public void syncRecomputesProgressFromSnapshot()
+	{
+		DailyTaskSet s = set();
+		Map<Skill, Integer> xp = PlayerSnapshot.emptySkillMap();
+		xp.put(Skill.MINING, 1700);
+		PlayerSnapshot snap = PlayerSnapshot.builder().experience(xp).build();
+		assertTrue(TaskTracker.sync(s, snap));
+		assertEquals(500, s.getTasks().get(0).getProgressXp());
+		assertTrue(s.getTasks().get(0).isCompleted());
+		assertFalse(TaskTracker.sync(s, snap));
 	}
 }

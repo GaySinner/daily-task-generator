@@ -6,6 +6,7 @@ import com.dailytaskgenerator.model.DailyTask;
 import com.dailytaskgenerator.model.DailyTaskSet;
 import com.dailytaskgenerator.player.PlayerSnapshot;
 import com.dailytaskgenerator.player.PlayerSnapshotBuilder;
+import com.dailytaskgenerator.store.TaskStore;
 import com.dailytaskgenerator.track.TaskTracker;
 import com.dailytaskgenerator.ui.DailyTaskPanel;
 import com.dailytaskgenerator.ui.TaskActions;
@@ -34,6 +35,7 @@ import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.OverlayMenuClicked;
+import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -70,6 +72,9 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 
 	@Inject
 	private SkillTaskProvider skillTaskProvider;
+
+	@Inject
+	private TaskStore taskStore;
 
 	private TaskGenerator generator;
 	private DailyTaskPanel panel;
@@ -160,10 +165,30 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	}
 
 	@Subscribe
+	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
+	{
+		// The profile decides which saved tasks belong to the account, so reload once it's known.
+		if (client.getGameState() == GameState.LOGGED_IN)
+		{
+			refreshPending = true;
+		}
+	}
+
+	@Subscribe
 	public void onStatChanged(StatChanged event)
 	{
-		if (taskSet != null && TaskTracker.onXp(taskSet, event.getSkill(), event.getXp()))
+		if (taskSet == null)
 		{
+			return;
+		}
+		long doneBefore = taskSet.completedCount();
+		if (TaskTracker.onXp(taskSet, event.getSkill(), event.getXp()))
+		{
+			// Progress itself is recomputed from XP on load, so only completions need saving.
+			if (taskSet.completedCount() != doneBefore)
+			{
+				save();
+			}
 			pushToPanel();
 		}
 	}
@@ -179,15 +204,43 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 
 	private void refresh()
 	{
-		PlayerSnapshot snapshot = snapshotBuilder.build();
-		if (taskSet == null || snapshot.getAccountHash() != accountHash || !today().equals(taskSet.getDate()))
+		if (!taskStore.isProfileReady())
 		{
-			accountHash = snapshot.getAccountHash();
-			generateNewSet(snapshot);
+			// Profile isn't set for this account yet; try again next tick.
+			refreshPending = true;
+			return;
+		}
+
+		PlayerSnapshot snapshot = snapshotBuilder.build();
+		if (taskSet != null && snapshot.getAccountHash() == accountHash && today().equals(taskSet.getDate()))
+		{
+			pushToPanel();
+			return;
+		}
+
+		accountHash = snapshot.getAccountHash();
+		DailyTaskSet saved = taskStore.load();
+		if (saved != null && today().equals(saved.getDate()))
+		{
+			taskSet = saved;
+			if (TaskTracker.sync(taskSet, snapshot))
+			{
+				save();
+			}
+			log.debug("Loaded {} saved tasks for {}", saved.getTasks().size(), saved.getDate());
+			pushToPanel();
 		}
 		else
 		{
-			pushToPanel();
+			generateNewSet(snapshot);
+		}
+	}
+
+	private void save()
+	{
+		if (taskSet != null && taskStore.isProfileReady())
+		{
+			taskStore.save(taskSet);
 		}
 	}
 
@@ -200,6 +253,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 			TaskGenerator.seed(snapshot.getAccountHash(), set.getDate(), 0)));
 		taskSet = set;
 		log.debug("Generated {} tasks for {}", set.getTasks().size(), set.getDate());
+		save();
 		pushToPanel();
 	}
 
@@ -250,6 +304,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 			taskSet.getTasks().stream()
 				.filter(t -> t.getId().equals(taskId))
 				.forEach(t -> t.setManuallyCompleted(done));
+			save();
 			pushToPanel();
 		});
 	}
@@ -286,6 +341,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 				return;
 			}
 			tasks.set(index, replacement.get(0));
+			save();
 			pushToPanel();
 		});
 	}
@@ -306,6 +362,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 			taskSet.setRerollCount(taskSet.getRerollCount() + 1);
 			kept.addAll(generator.pick(snapshotBuilder.build(), needed, currentIds(), rerollRandom()));
 			taskSet.setTasks(kept);
+			save();
 			pushToPanel();
 		});
 	}
