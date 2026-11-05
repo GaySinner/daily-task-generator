@@ -1,10 +1,13 @@
 package com.dailytaskgenerator.track;
 
+import com.dailytaskgenerator.data.DiaryRegion;
+import com.dailytaskgenerator.data.DiaryTier;
 import com.dailytaskgenerator.model.DailyTask;
 import com.dailytaskgenerator.model.DailyTaskSet;
 import com.dailytaskgenerator.model.TaskType;
 import com.dailytaskgenerator.player.PlayerSnapshot;
 import java.util.Map;
+import java.util.Set;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
 import net.runelite.api.Skill;
@@ -32,6 +35,31 @@ public final class TaskTracker
 		}
 		changed |= onQuestStates(set, snapshot.getQuestStates());
 		changed |= onCombatAchievementVarps(set, snapshot.getCaCompletionVarps());
+		changed |= onDiaryTiers(set, snapshot.getCompletedDiaryTiers());
+		return changed;
+	}
+
+	/**
+	 * Marks diary tasks complete once their tier is done.
+	 *
+	 * @return true if any task changed
+	 */
+	public static boolean onDiaryTiers(DailyTaskSet set, Map<DiaryRegion, Set<DiaryTier>> completed)
+	{
+		boolean changed = false;
+		for (DailyTask task : set.getTasks())
+		{
+			if (task.getType() != TaskType.DIARY || task.isCompleted() || task.getDiaryRegion() == null)
+			{
+				continue;
+			}
+			Set<DiaryTier> done = completed.get(task.getDiaryRegion());
+			if (done != null && done.contains(task.getDiaryTier()))
+			{
+				task.setCompleted(true);
+				changed = true;
+			}
+		}
 		return changed;
 	}
 

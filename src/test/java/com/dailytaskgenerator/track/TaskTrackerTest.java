@@ -93,4 +93,21 @@ public class TaskTrackerTest
 		assertTrue(TaskTracker.onCombatAchievementVarps(s, new int[]{0, 1 << 3}));
 		assertTrue(ca.isCompleted());
 	}
+
+	@Test
+	public void diaryCompletesWhenTierDone()
+	{
+		DailyTask d = new DailyTask();
+		d.setId("diary:FALADOR:EASY");
+		d.setType(TaskType.DIARY);
+		d.setDiaryRegion(com.dailytaskgenerator.data.DiaryRegion.FALADOR);
+		d.setDiaryTier(com.dailytaskgenerator.data.DiaryTier.EASY);
+		DailyTaskSet s = new DailyTaskSet();
+		s.setTasks(new java.util.ArrayList<>(List.of(d)));
+
+		assertFalse(TaskTracker.onDiaryTiers(s, Map.of()));
+		assertTrue(TaskTracker.onDiaryTiers(s, Map.of(com.dailytaskgenerator.data.DiaryRegion.FALADOR,
+			java.util.EnumSet.of(com.dailytaskgenerator.data.DiaryTier.EASY))));
+		assertTrue(d.isCompleted());
+	}
 }

@@ -28,4 +28,9 @@ public final class TestTasks
 	{
 		return CombatAchievementTaskProvider.buildTask(ca);
 	}
+
+	public static DailyTask diary(com.dailytaskgenerator.data.DiaryRegion region, com.dailytaskgenerator.data.DiaryTier tier)
+	{
+		return DiaryTaskProvider.buildTask(region, tier);
+	}
 }

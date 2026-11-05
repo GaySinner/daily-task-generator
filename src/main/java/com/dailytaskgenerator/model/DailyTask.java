@@ -1,5 +1,7 @@
 package com.dailytaskgenerator.model;
 
+import com.dailytaskgenerator.data.DiaryRegion;
+import com.dailytaskgenerator.data.DiaryTier;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.runelite.api.Quest;
@@ -37,6 +39,10 @@ public class DailyTask
 	// Combat achievement tasks; boxed because 0 is a valid task id.
 	private Integer caTaskId;
 
+	// Achievement diary tasks
+	private DiaryRegion diaryRegion;
+	private DiaryTier diaryTier;
+
 	/**
 	 * Completed because the game state showed it.
 	 */
@@ -70,6 +76,8 @@ public class DailyTask
 		t.progressXp = progressXp;
 		t.quest = quest;
 		t.caTaskId = caTaskId;
+		t.diaryRegion = diaryRegion;
+		t.diaryTier = diaryTier;
 		t.completed = completed;
 		t.manuallyCompleted = manuallyCompleted;
 		return t;

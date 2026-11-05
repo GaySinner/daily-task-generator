@@ -81,6 +81,7 @@ public class TaskStore
 			.filter(t -> t.getType() != TaskType.SKILL || t.getSkill() != null)
 			.filter(t -> t.getType() != TaskType.QUEST || t.getQuest() != null)
 			.filter(t -> t.getType() != TaskType.COMBAT_ACHIEVEMENT || t.getCaTaskId() != null)
+			.filter(t -> t.getType() != TaskType.DIARY || (t.getDiaryRegion() != null && t.getDiaryTier() != null))
 			.collect(Collectors.toCollection(ArrayList::new)));
 		return set;
 	}

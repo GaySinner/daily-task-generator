@@ -49,4 +49,11 @@ public class WikiLinksTest
 		assertEquals("https://oldschool.runescape.wiki/w/Special:Search?search=Doric%27s%20Quest&utm_source=runelite",
 			WikiLinks.url(old));
 	}
+
+	@Test
+	public void diaryLinksToTierSection()
+	{
+		assertEquals("https://oldschool.runescape.wiki/w/Kourend%20&%20Kebos%20Diary?utm_source=runelite#Hard",
+			WikiLinks.url(TestTasks.diary(com.dailytaskgenerator.data.DiaryRegion.KOUREND, com.dailytaskgenerator.data.DiaryTier.HARD)));
+	}
 }

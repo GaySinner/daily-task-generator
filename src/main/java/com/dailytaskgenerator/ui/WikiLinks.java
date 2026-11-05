@@ -31,6 +31,15 @@ final class WikiLinks
 		{
 			url.addPathSegment(term);
 		}
+		else if (task.getType() == TaskType.DIARY && task.getDiaryRegion() != null)
+		{
+			// Diary pages have one section per tier.
+			url.addPathSegment(task.getDiaryRegion().getWikiPage());
+			if (task.getDiaryTier() != null)
+			{
+				url.fragment(task.getDiaryTier().getDisplayName());
+			}
+		}
 		else
 		{
 			url.addPathSegment("Special:Search").addQueryParameter("search", term);

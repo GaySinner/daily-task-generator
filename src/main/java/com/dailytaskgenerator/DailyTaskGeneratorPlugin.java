@@ -1,8 +1,10 @@
 package com.dailytaskgenerator;
 
 import com.dailytaskgenerator.data.CombatAchievementLoader;
+import com.dailytaskgenerator.data.DiaryRegion;
 import com.dailytaskgenerator.data.QuestRequirementLoader;
 import com.dailytaskgenerator.generate.CombatAchievementTaskProvider;
+import com.dailytaskgenerator.generate.DiaryTaskProvider;
 import com.dailytaskgenerator.generate.QuestTaskProvider;
 import com.dailytaskgenerator.generate.SkillTaskProvider;
 import com.dailytaskgenerator.generate.TaskGenerator;
@@ -97,6 +99,9 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	private CombatAchievementLoader caLoader;
 
 	@Inject
+	private DiaryTaskProvider diaryTaskProvider;
+
+	@Inject
 	private TaskStore taskStore;
 
 	private TaskGenerator generator;
@@ -119,7 +124,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	@Override
 	protected void startUp()
 	{
-		generator = new TaskGenerator(List.of(skillTaskProvider, questTaskProvider, caTaskProvider));
+		generator = new TaskGenerator(List.of(skillTaskProvider, questTaskProvider, diaryTaskProvider, caTaskProvider));
 		settingsLink = new SettingsLink(this);
 		panel = new DailyTaskPanel(this);
 
@@ -218,8 +223,20 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		// Quest progress is stored in varps/varbits. Just flag it; the check happens on a tick.
 		questCheckPending = true;
 
-		if (taskSet != null && isCaCompletionVarp(event.getVarpId())
-			&& TaskTracker.onCombatAchievementVarps(taskSet, snapshotBuilder.readCaVarps()))
+		if (taskSet == null)
+		{
+			return;
+		}
+		boolean changed = false;
+		if (isCaCompletionVarp(event.getVarpId()))
+		{
+			changed = TaskTracker.onCombatAchievementVarps(taskSet, snapshotBuilder.readCaVarps());
+		}
+		else if (DiaryRegion.isCompletionVarbit(event.getVarbitId()))
+		{
+			changed = TaskTracker.onDiaryTiers(taskSet, snapshotBuilder.readDiaryTiers());
+		}
+		if (changed)
 		{
 			save();
 			pushToPanel();

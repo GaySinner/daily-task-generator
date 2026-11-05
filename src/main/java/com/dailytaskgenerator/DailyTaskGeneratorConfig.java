@@ -1,6 +1,7 @@
 package com.dailytaskgenerator;
 
 import com.dailytaskgenerator.data.CombatAchievementTier;
+import com.dailytaskgenerator.data.DiaryTier;
 import com.dailytaskgenerator.generate.SkillEffort;
 import com.dailytaskgenerator.generate.SkillSelection;
 import net.runelite.client.config.Config;
@@ -34,6 +35,13 @@ public interface DailyTaskGeneratorConfig extends Config
 		position = 30
 	)
 	String caSection = "caSection";
+
+	@ConfigSection(
+		name = "Achievement diary tasks",
+		description = "Settings for achievement diary tasks",
+		position = 40
+	)
+	String diarySection = "diarySection";
 
 	@Range(min = 1, max = 10)
 	@ConfigItem(
@@ -141,5 +149,29 @@ public interface DailyTaskGeneratorConfig extends Config
 	default CombatAchievementTier caMaxTier()
 	{
 		return CombatAchievementTier.MEDIUM;
+	}
+
+	@ConfigItem(
+		keyName = "diaryTasks",
+		name = "Enable diaries",
+		description = "Suggest the next unfinished achievement diary tier in each region (members worlds only)",
+		section = diarySection,
+		position = 41
+	)
+	default boolean diaryTasks()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "diaryMaxTier",
+		name = "Hardest tier",
+		description = "The hardest achievement diary tier to suggest",
+		section = diarySection,
+		position = 42
+	)
+	default DiaryTier diaryMaxTier()
+	{
+		return DiaryTier.MEDIUM;
 	}
 }

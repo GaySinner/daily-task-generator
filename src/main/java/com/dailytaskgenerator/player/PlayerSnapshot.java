@@ -1,8 +1,11 @@
 package com.dailytaskgenerator.player;
 
+import com.dailytaskgenerator.data.DiaryRegion;
+import com.dailytaskgenerator.data.DiaryTier;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Set;
 import lombok.Builder;
 import lombok.Value;
 import net.runelite.api.Quest;
@@ -31,6 +34,11 @@ public class PlayerSnapshot
 	 */
 	@Builder.Default
 	int[] caCompletionVarps = new int[0];
+	/**
+	 * Completed diary tiers; regions with none completed may be absent.
+	 */
+	@Builder.Default
+	Map<DiaryRegion, Set<DiaryTier>> completedDiaryTiers = Collections.emptyMap();
 
 	public int getLevel(Skill skill)
 	{
@@ -50,6 +58,12 @@ public class PlayerSnapshot
 	public boolean isQuestFinished(Quest quest)
 	{
 		return getQuestState(quest) == QuestState.FINISHED;
+	}
+
+	public boolean isDiaryTierComplete(DiaryRegion region, DiaryTier tier)
+	{
+		Set<DiaryTier> done = completedDiaryTiers.get(region);
+		return done != null && done.contains(tier);
 	}
 
 	public boolean isCombatAchievementComplete(int taskId)

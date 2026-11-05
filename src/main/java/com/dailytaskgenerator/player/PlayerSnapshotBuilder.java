@@ -1,6 +1,10 @@
 package com.dailytaskgenerator.player;
 
 import com.dailytaskgenerator.data.CombatAchievementLoader;
+import com.dailytaskgenerator.data.DiaryRegion;
+import com.dailytaskgenerator.data.DiaryTier;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.EnumMap;
 import java.util.Map;
 import javax.inject.Inject;
@@ -22,6 +26,27 @@ public class PlayerSnapshotBuilder
 	PlayerSnapshotBuilder(Client client)
 	{
 		this.client = client;
+	}
+
+	/**
+	 * Client thread only.
+	 */
+	public Map<DiaryRegion, Set<DiaryTier>> readDiaryTiers()
+	{
+		Map<DiaryRegion, Set<DiaryTier>> out = new EnumMap<>(DiaryRegion.class);
+		for (DiaryRegion region : DiaryRegion.values())
+		{
+			Set<DiaryTier> done = EnumSet.noneOf(DiaryTier.class);
+			for (DiaryTier tier : DiaryTier.values())
+			{
+				if (client.getVarbitValue(region.getVarbit(tier)) != 0)
+				{
+					done.add(tier);
+				}
+			}
+			out.put(region, done);
+		}
+		return out;
 	}
 
 	/**
@@ -70,6 +95,7 @@ public class PlayerSnapshotBuilder
 			.questPoints(client.getVarpValue(VarPlayerID.QP))
 			.questStates(quests)
 			.caCompletionVarps(readCaVarps())
+			.completedDiaryTiers(readDiaryTiers())
 			.levels(levels)
 			.experience(xp)
 			.build();
