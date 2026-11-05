@@ -26,6 +26,11 @@ public class PlayerSnapshot
 	Map<Skill, Integer> experience = Collections.emptyMap();
 	@Builder.Default
 	Map<Quest, QuestState> questStates = Collections.emptyMap();
+	/**
+	 * Values of the CA_TASK_COMPLETED varps, in order.
+	 */
+	@Builder.Default
+	int[] caCompletionVarps = new int[0];
 
 	public int getLevel(Skill skill)
 	{
@@ -45,6 +50,17 @@ public class PlayerSnapshot
 	public boolean isQuestFinished(Quest quest)
 	{
 		return getQuestState(quest) == QuestState.FINISHED;
+	}
+
+	public boolean isCombatAchievementComplete(int taskId)
+	{
+		return isBitSet(caCompletionVarps, taskId);
+	}
+
+	public static boolean isBitSet(int[] varps, int taskId)
+	{
+		int index = taskId / 32;
+		return taskId >= 0 && index < varps.length && (varps[index] & (1 << (taskId % 32))) != 0;
 	}
 
 	public static Map<Skill, Integer> emptySkillMap()

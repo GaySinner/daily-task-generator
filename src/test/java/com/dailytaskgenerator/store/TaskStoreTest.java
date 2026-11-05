@@ -57,6 +57,7 @@ public class TaskStoreTest
 			+ "{\"id\":\"a\",\"type\":\"SOMETHING_NEW\"},"
 			+ "{\"id\":\"b\",\"type\":\"SKILL\",\"skill\":\"NOT_A_SKILL\"},"
 			+ "{\"id\":\"c\",\"type\":\"QUEST\",\"quest\":\"NOT_A_QUEST\"},"
+			+ "{\"id\":\"d\",\"type\":\"COMBAT_ACHIEVEMENT\"},"
 			+ "{\"id\":\"skill:MINING\",\"type\":\"SKILL\",\"skill\":\"MINING\",\"targetXp\":100}]}";
 		DailyTaskSet set = TaskStore.parse(gson, json);
 		assertEquals(1, set.getTasks().size());

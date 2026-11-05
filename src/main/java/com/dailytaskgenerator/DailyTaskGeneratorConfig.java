@@ -1,5 +1,6 @@
 package com.dailytaskgenerator;
 
+import com.dailytaskgenerator.data.CombatAchievementTier;
 import com.dailytaskgenerator.generate.SkillEffort;
 import com.dailytaskgenerator.generate.SkillSelection;
 import net.runelite.client.config.Config;
@@ -26,6 +27,13 @@ public interface DailyTaskGeneratorConfig extends Config
 		position = 20
 	)
 	String questSection = "questSection";
+
+	@ConfigSection(
+		name = "Combat achievement tasks",
+		description = "Settings for combat achievement tasks",
+		position = 30
+	)
+	String caSection = "caSection";
 
 	@Range(min = 1, max = 10)
 	@ConfigItem(
@@ -109,5 +117,29 @@ public interface DailyTaskGeneratorConfig extends Config
 	default boolean questTasks()
 	{
 		return true;
+	}
+
+	@ConfigItem(
+		keyName = "caTasks",
+		name = "Enable combat achievements",
+		description = "Suggest combat achievement tasks you haven't completed (members worlds only)",
+		section = caSection,
+		position = 31
+	)
+	default boolean caTasks()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "caMaxTier",
+		name = "Hardest tier",
+		description = "The hardest combat achievement tier to suggest tasks from",
+		section = caSection,
+		position = 32
+	)
+	default CombatAchievementTier caMaxTier()
+	{
+		return CombatAchievementTier.MEDIUM;
 	}
 }

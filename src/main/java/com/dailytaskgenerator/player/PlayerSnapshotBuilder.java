@@ -1,5 +1,6 @@
 package com.dailytaskgenerator.player;
 
+import com.dailytaskgenerator.data.CombatAchievementLoader;
 import java.util.EnumMap;
 import java.util.Map;
 import javax.inject.Inject;
@@ -21,6 +22,19 @@ public class PlayerSnapshotBuilder
 	PlayerSnapshotBuilder(Client client)
 	{
 		this.client = client;
+	}
+
+	/**
+	 * Client thread only.
+	 */
+	public int[] readCaVarps()
+	{
+		int[] varps = new int[CombatAchievementLoader.COMPLETION_VARPS.length];
+		for (int i = 0; i < varps.length; i++)
+		{
+			varps[i] = client.getVarpValue(CombatAchievementLoader.COMPLETION_VARPS[i]);
+		}
+		return varps;
 	}
 
 	/**
@@ -55,6 +69,7 @@ public class PlayerSnapshotBuilder
 			.combatLevel(local != null ? local.getCombatLevel() : 3)
 			.questPoints(client.getVarpValue(VarPlayerID.QP))
 			.questStates(quests)
+			.caCompletionVarps(readCaVarps())
 			.levels(levels)
 			.experience(xp)
 			.build();

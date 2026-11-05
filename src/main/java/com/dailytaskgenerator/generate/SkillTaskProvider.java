@@ -96,6 +96,7 @@ public class SkillTaskProvider implements TaskProvider
 		task.setType(TaskType.SKILL);
 		task.setSkill(skill);
 		task.setBaselineXp(xp);
+		task.setWikiPage(skill.getName());
 
 		if (level < Experience.MAX_REAL_LEVEL)
 		{

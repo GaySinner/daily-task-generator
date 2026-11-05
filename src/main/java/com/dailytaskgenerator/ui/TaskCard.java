@@ -3,8 +3,11 @@ package com.dailytaskgenerator.ui;
 import com.dailytaskgenerator.model.DailyTask;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.NumberFormat;
 import java.util.Locale;
 import javax.swing.BorderFactory;
@@ -15,6 +18,7 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.LinkBrowser;
 
 class TaskCard extends JPanel
 {
@@ -36,9 +40,18 @@ class TaskCard extends JPanel
 		title.setFont(FontManager.getRunescapeBoldFont());
 		title.setForeground(task.isDone() ? DONE_COLOR : Color.WHITE);
 
+		JPanel typeRow = new JPanel(new BorderLayout());
+		typeRow.setOpaque(false);
+		typeRow.add(type, BorderLayout.WEST);
+		String wikiUrl = WikiLinks.url(task);
+		if (wikiUrl != null)
+		{
+			typeRow.add(wikiLink(wikiUrl), BorderLayout.EAST);
+		}
+
 		JPanel header = new JPanel(new GridLayout(0, 1));
 		header.setOpaque(false);
-		header.add(type);
+		header.add(typeRow);
 		header.add(title);
 		if (task.getDescription() != null)
 		{
@@ -80,6 +93,36 @@ class TaskCard extends JPanel
 		footer.add(reroll, BorderLayout.EAST);
 
 		add(footer, BorderLayout.SOUTH);
+	}
+
+	private static JLabel wikiLink(String url)
+	{
+		JLabel link = new JLabel("Wiki");
+		link.setFont(FontManager.getRunescapeSmallFont());
+		link.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		link.setToolTipText("Open on the OSRS Wiki");
+		link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		link.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(MouseEvent e)
+			{
+				LinkBrowser.browse(url);
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				link.setForeground(Color.WHITE);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				link.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+			}
+		});
+		return link;
 	}
 
 	private static String html(String text)

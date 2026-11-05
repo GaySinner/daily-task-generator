@@ -1,6 +1,8 @@
 package com.dailytaskgenerator;
 
+import com.dailytaskgenerator.data.CombatAchievementLoader;
 import com.dailytaskgenerator.data.QuestRequirementLoader;
+import com.dailytaskgenerator.generate.CombatAchievementTaskProvider;
 import com.dailytaskgenerator.generate.QuestTaskProvider;
 import com.dailytaskgenerator.generate.SkillTaskProvider;
 import com.dailytaskgenerator.generate.TaskGenerator;
@@ -89,6 +91,12 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	private QuestRequirementLoader questRequirementLoader;
 
 	@Inject
+	private CombatAchievementTaskProvider caTaskProvider;
+
+	@Inject
+	private CombatAchievementLoader caLoader;
+
+	@Inject
 	private TaskStore taskStore;
 
 	private TaskGenerator generator;
@@ -111,7 +119,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	@Override
 	protected void startUp()
 	{
-		generator = new TaskGenerator(List.of(skillTaskProvider, questTaskProvider));
+		generator = new TaskGenerator(List.of(skillTaskProvider, questTaskProvider, caTaskProvider));
 		settingsLink = new SettingsLink(this);
 		panel = new DailyTaskPanel(this);
 
@@ -146,6 +154,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		refreshPending = false;
 		questCheckPending = false;
 		questTaskProvider.setRequirements(Collections.emptyMap());
+		caTaskProvider.setAchievements(Collections.emptyList());
 	}
 
 	@Subscribe
@@ -208,6 +217,25 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	{
 		// Quest progress is stored in varps/varbits. Just flag it; the check happens on a tick.
 		questCheckPending = true;
+
+		if (taskSet != null && isCaCompletionVarp(event.getVarpId())
+			&& TaskTracker.onCombatAchievementVarps(taskSet, snapshotBuilder.readCaVarps()))
+		{
+			save();
+			pushToPanel();
+		}
+	}
+
+	private static boolean isCaCompletionVarp(int varpId)
+	{
+		for (int varp : CombatAchievementLoader.COMPLETION_VARPS)
+		{
+			if (varp == varpId)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void checkQuestTasks()
@@ -274,6 +302,10 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		{
 			// Cache data is only available once logged in; it doesn't change, so load it once.
 			questTaskProvider.setRequirements(questRequirementLoader.load());
+		}
+		if (!caTaskProvider.hasAchievements())
+		{
+			caTaskProvider.setAchievements(caLoader.load());
 		}
 
 		PlayerSnapshot snapshot = snapshotBuilder.build();

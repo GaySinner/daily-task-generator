@@ -78,4 +78,19 @@ public class TaskTrackerTest
 		assertTrue(TaskTracker.onQuestStates(s, Map.of(Quest.DORICS_QUEST, QuestState.FINISHED)));
 		assertTrue(q.isCompleted());
 	}
+
+	@Test
+	public void combatAchievementCompletesWhenBitSet()
+	{
+		DailyTask ca = new DailyTask();
+		ca.setId("ca:35");
+		ca.setType(TaskType.COMBAT_ACHIEVEMENT);
+		ca.setCaTaskId(35);
+		DailyTaskSet s = new DailyTaskSet();
+		s.setTasks(new java.util.ArrayList<>(List.of(ca)));
+
+		assertFalse(TaskTracker.onCombatAchievementVarps(s, new int[]{-1, 0}));
+		assertTrue(TaskTracker.onCombatAchievementVarps(s, new int[]{0, 1 << 3}));
+		assertTrue(ca.isCompleted());
+	}
 }

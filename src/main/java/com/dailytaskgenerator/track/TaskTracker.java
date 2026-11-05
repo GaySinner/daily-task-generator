@@ -31,6 +31,27 @@ public final class TaskTracker
 			}
 		}
 		changed |= onQuestStates(set, snapshot.getQuestStates());
+		changed |= onCombatAchievementVarps(set, snapshot.getCaCompletionVarps());
+		return changed;
+	}
+
+	/**
+	 * Marks combat achievement tasks complete once their completion bit is set.
+	 *
+	 * @return true if any task changed
+	 */
+	public static boolean onCombatAchievementVarps(DailyTaskSet set, int[] varps)
+	{
+		boolean changed = false;
+		for (DailyTask task : set.getTasks())
+		{
+			if (task.getType() == TaskType.COMBAT_ACHIEVEMENT && !task.isCompleted() && task.getCaTaskId() != null
+				&& PlayerSnapshot.isBitSet(varps, task.getCaTaskId()))
+			{
+				task.setCompleted(true);
+				changed = true;
+			}
+		}
 		return changed;
 	}
 

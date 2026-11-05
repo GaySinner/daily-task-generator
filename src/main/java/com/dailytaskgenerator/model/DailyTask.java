@@ -20,6 +20,10 @@ public class DailyTask
 	private TaskType type;
 	private String title;
 	private String description;
+	/**
+	 * OSRS Wiki page or search term for this task; null on tasks saved before links existed.
+	 */
+	private String wikiPage;
 
 	// Skill tasks
 	private Skill skill;
@@ -29,6 +33,9 @@ public class DailyTask
 
 	// Quest tasks
 	private Quest quest;
+
+	// Combat achievement tasks; boxed because 0 is a valid task id.
+	private Integer caTaskId;
 
 	/**
 	 * Completed because the game state showed it.
@@ -56,11 +63,13 @@ public class DailyTask
 		t.type = type;
 		t.title = title;
 		t.description = description;
+		t.wikiPage = wikiPage;
 		t.skill = skill;
 		t.baselineXp = baselineXp;
 		t.targetXp = targetXp;
 		t.progressXp = progressXp;
 		t.quest = quest;
+		t.caTaskId = caTaskId;
 		t.completed = completed;
 		t.manuallyCompleted = manuallyCompleted;
 		return t;

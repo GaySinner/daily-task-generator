@@ -104,6 +104,7 @@ public class QuestTaskProvider implements TaskProvider
 		task.setId("quest:" + quest.name());
 		task.setType(TaskType.QUEST);
 		task.setQuest(quest);
+		task.setWikiPage(quest.getName());
 		task.setTitle((started ? "Continue " : "Complete ") + quest.getName());
 		task.setDescription(started ? "Already started" : "You meet the listed requirements");
 		return task;
