@@ -68,7 +68,14 @@ public class DailyTaskPanel extends PluginPanel
 
 		regenerate.setToolTipText("Replace all unfinished tasks (uses one reroll)");
 		regenerate.addActionListener(e -> actions.regenerate());
-		add(regenerate, BorderLayout.SOUTH);
+		JButton importTasks = new JButton("Import custom tasks");
+		importTasks.setToolTipText("Load your own tasks from a .txt or .json file");
+		importTasks.addActionListener(e -> actions.importCustomTasks());
+
+		JPanel buttons = new JPanel(new GridLayout(0, 1, 0, 4));
+		buttons.add(regenerate);
+		buttons.add(importTasks);
+		add(buttons, BorderLayout.SOUTH);
 
 		showLoggedOut();
 	}

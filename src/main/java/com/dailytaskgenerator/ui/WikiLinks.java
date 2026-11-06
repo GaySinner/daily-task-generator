@@ -21,7 +21,8 @@ final class WikiLinks
 	@Nullable
 	static String url(DailyTask task)
 	{
-		String term = term(task);
+		// Custom tasks only link when the file gave a wiki page.
+		String term = task.getType() == TaskType.CUSTOM ? task.getWikiPage() : term(task);
 		if (term == null || term.isEmpty())
 		{
 			return null;

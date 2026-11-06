@@ -12,4 +12,6 @@ public interface TaskActions
 	void regenerate();
 
 	void openSettings();
+
+	void importCustomTasks();
 }
