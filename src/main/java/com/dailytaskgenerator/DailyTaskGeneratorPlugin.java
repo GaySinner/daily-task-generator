@@ -4,6 +4,9 @@ import com.dailytaskgenerator.data.CombatAchievementLoader;
 import com.dailytaskgenerator.data.DiaryRegion;
 import com.dailytaskgenerator.data.QuestRequirementLoader;
 import com.dailytaskgenerator.generate.CombatAchievementTaskProvider;
+import com.dailytaskgenerator.data.CustomTask;
+import com.dailytaskgenerator.data.CustomTaskParser;
+import com.dailytaskgenerator.generate.CustomTaskProvider;
 import com.dailytaskgenerator.generate.DiaryTaskProvider;
 import com.dailytaskgenerator.generate.QuestTaskProvider;
 import com.dailytaskgenerator.generate.SkillTaskProvider;
@@ -15,14 +18,18 @@ import com.dailytaskgenerator.model.TaskType;
 import com.dailytaskgenerator.notify.TaskNotifier;
 import com.dailytaskgenerator.player.PlayerSnapshot;
 import com.dailytaskgenerator.player.PlayerSnapshotBuilder;
+import com.dailytaskgenerator.store.CustomTaskStore;
 import com.dailytaskgenerator.store.TaskStore;
 import com.dailytaskgenerator.track.TaskTracker;
 import com.dailytaskgenerator.ui.DailyTaskPanel;
 import com.dailytaskgenerator.ui.TaskActions;
+import com.google.gson.Gson;
 import com.google.inject.Provides;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Collections;
@@ -31,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
@@ -55,6 +63,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.Filepath;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.ImageUtil;
@@ -63,6 +72,7 @@ import net.runelite.client.util.ImageUtil;
 @PluginDescriptor(
 	name = "Daily Task Generator",
 	description = "Generates daily tasks tailored to your character",
+	internalName = "daily-task-generator",
 	tags = {"daily", "tasks", "goals", "quests", "diary", "combat achievements"}
 )
 public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
@@ -104,6 +114,18 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	private DiaryTaskProvider diaryTaskProvider;
 
 	@Inject
+	private Gson gson;
+
+	@Inject
+	private CustomTaskProvider customTaskProvider;
+
+	@Inject
+	private CustomTaskStore customTaskStore;
+
+	@Inject
+	private ScheduledExecutorService executor;
+
+	@Inject
 	private TaskStore taskStore;
 
 	@Inject
@@ -130,7 +152,8 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 	@Override
 	protected void startUp()
 	{
-		generator = new TaskGenerator(List.of(skillTaskProvider, questTaskProvider, diaryTaskProvider, caTaskProvider));
+		generator = new TaskGenerator(List.of(skillTaskProvider, questTaskProvider, diaryTaskProvider, caTaskProvider, customTaskProvider));
+		customTaskProvider.setTasks(customTaskStore.load());
 		settingsLink = new SettingsLink(this);
 		panel = new DailyTaskPanel(this);
 
@@ -168,6 +191,7 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 		questCheckPending = false;
 		questTaskProvider.setRequirements(Collections.emptyMap());
 		caTaskProvider.setAchievements(Collections.emptyList());
+		customTaskProvider.setTasks(Collections.emptyList());
 	}
 
 	@Subscribe
@@ -550,6 +574,57 @@ public class DailyTaskGeneratorPlugin extends Plugin implements TaskActions
 			taskSet.setTasks(kept);
 			save();
 			pushToPanel();
+		});
+	}
+
+	@Override
+	public void importCustomTasks()
+	{
+		// Called on the Swing thread, which the file chooser requires.
+		List<Filepath> chosen = new Filepath.Chooser()
+			.setIsOpen()
+			.setAcceptsFiles()
+			.setDialogTitle("Import custom tasks")
+			.addExtensionFilter("Task files", "txt", "csv", "md", "json")
+			.showDialog(panel);
+		if (chosen == null || chosen.isEmpty())
+		{
+			return;
+		}
+		Filepath file = chosen.get(0);
+		executor.execute(() ->
+		{
+			List<CustomTask> parsed;
+			try (BufferedReader reader = file.openBufferedReader())
+			{
+				parsed = CustomTaskParser.parse(reader, gson);
+			}
+			catch (IOException e)
+			{
+				log.debug("Could not read custom task file", e);
+				showImportResult("Could not read that file. If it is JSON, check that it is a valid array.");
+				return;
+			}
+			if (parsed.isEmpty())
+			{
+				showImportResult("No tasks found. Use one task per line.");
+				return;
+			}
+			customTaskStore.save(parsed);
+			customTaskProvider.setTasks(parsed);
+			showImportResult("Imported " + parsed.size() + " custom task" + (parsed.size() == 1 ? "" : "s")
+				+ ". They can appear from your next reroll or tomorrow.");
+		});
+	}
+
+	private void showImportResult(String message)
+	{
+		SwingUtilities.invokeLater(() ->
+		{
+			if (panel != null)
+			{
+				javax.swing.JOptionPane.showMessageDialog(panel, message, "Custom tasks", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+			}
 		});
 	}
 

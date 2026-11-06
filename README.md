@@ -10,8 +10,31 @@ A RuneLite plugin that gives you a fresh set of tasks each day, chosen to suit t
 | Quest | *Complete Dragon Slayer I*, *Continue The Dig Site* | Unfinished quests and miniquests whose listed requirements you meet. Quests you've already started come up more often. | The quest is finished. |
 | Diary | *Complete the Ardougne Easy diary* | The lowest unfinished tier in each region, up to the **Hardest tier** setting. | The game marks that tier complete. |
 | Combat | *Noxious Foe* (Easy) | Combat achievement tasks you haven't done, up to the **Hardest tier** setting. Easier tiers come up more often. | The game marks the task complete. |
+| Custom | *Do a Barrows run* | Tasks you import from your own file, boosted by the **Custom task weight** setting. | You tick it off. |
 
 Each task card has a **Wiki** link to the skill, quest, diary or monster page, and a **Done** box for ticking tasks off yourself.
+
+## Custom tasks
+
+Click **Import custom tasks** in the side panel and pick a `.txt` or `.json` file. The tasks are saved in your RuneLite config, so the file is only read once. New tasks can appear from your next reroll or the next day.
+
+Plain text, one task per line as `title | description | weight`. Description and weight are optional; blank lines and lines starting with `#` are ignored.
+
+```
+# my list
+Do a Barrows run | Bring food | 2
+Plant a tree
+```
+
+JSON, an array of objects. Only `title` is required; `wikiPage` adds a Wiki link to the card.
+
+```json
+[
+  { "title": "Do a Barrows run", "description": "Bring food", "weight": 2, "wikiPage": "Barrows" }
+]
+```
+
+A task's weight is how likely it is relative to your other custom tasks (default 1). The **Custom task weight** setting controls how much more likely custom tasks are than any other task type.
 
 ## How a day works
 

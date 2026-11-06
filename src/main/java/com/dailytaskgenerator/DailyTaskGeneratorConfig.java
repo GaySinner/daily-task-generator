@@ -44,6 +44,13 @@ public interface DailyTaskGeneratorConfig extends Config
 	)
 	String diarySection = "diarySection";
 
+	@ConfigSection(
+		name = "Custom tasks",
+		description = "Settings for tasks imported from your own file",
+		position = 50
+	)
+	String customSection = "customSection";
+
 	@Range(min = 1, max = 10)
 	@ConfigItem(
 		keyName = "tasksPerDay",
@@ -198,5 +205,31 @@ public interface DailyTaskGeneratorConfig extends Config
 	default DiaryTier diaryMaxTier()
 	{
 		return DiaryTier.MEDIUM;
+	}
+
+	@ConfigItem(
+		keyName = "customTasks",
+		name = "Enable custom tasks",
+		description = "Include tasks from the file you imported with the Import button in the side panel",
+		section = customSection,
+		position = 51
+	)
+	default boolean customTasks()
+	{
+		return true;
+	}
+
+	@Range(min = 1, max = 10)
+	@ConfigItem(
+		keyName = "customTaskWeight",
+		name = "Custom task weight",
+		description = "How much more likely custom tasks are to be picked than any other task type."
+			+ " 1 means equally likely; 3 means three times as likely.",
+		section = customSection,
+		position = 52
+	)
+	default int customTaskWeight()
+	{
+		return 3;
 	}
 }

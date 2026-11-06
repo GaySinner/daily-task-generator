@@ -4,7 +4,9 @@ import com.dailytaskgenerator.model.DailyTask;
 import com.dailytaskgenerator.player.PlayerSnapshot;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.ToDoubleFunction;
@@ -56,6 +58,7 @@ public class TaskGenerator
 	public List<DailyTask> pick(PlayerSnapshot snapshot, int count, Set<String> excludeIds, Random random)
 	{
 		List<List<TaskCandidate>> pools = new ArrayList<>();
+		Map<List<TaskCandidate>, Double> poolWeights = new IdentityHashMap<>();
 		for (TaskProvider provider : providers)
 		{
 			if (!provider.isEnabled())
@@ -68,14 +71,15 @@ public class TaskGenerator
 			if (!pool.isEmpty())
 			{
 				pools.add(pool);
+				poolWeights.put(pool, Math.max(provider.categoryWeight(), 0.01));
 			}
 		}
 
 		List<DailyTask> out = new ArrayList<>();
 		while (out.size() < count && !pools.isEmpty())
 		{
-			// Each category with candidates left gets an equal chance; empty ones drop out.
-			List<TaskCandidate> pool = pools.get(random.nextInt(pools.size()));
+			// Each category with candidates left gets a chance by its weight; empty ones drop out.
+			List<TaskCandidate> pool = weightedPool(pools, poolWeights, random);
 			TaskCandidate chosen = weightedRemove(pool, TaskCandidate::getWeight, random);
 			out.add(chosen.getTask());
 			if (pool.isEmpty())
@@ -84,6 +88,37 @@ public class TaskGenerator
 			}
 		}
 		return out;
+	}
+
+	private static List<TaskCandidate> weightedPool(List<List<TaskCandidate>> pools,
+		Map<List<TaskCandidate>, Double> weights, Random random)
+	{
+		// Equal weights take the plain path so default behaviour is unchanged.
+		boolean equal = pools.stream().map(weights::get).distinct().count() == 1;
+		if (equal)
+		{
+			return pools.get(random.nextInt(pools.size()));
+		}
+		return weightedPick(pools, weights::get, random);
+	}
+
+	private static <T> T weightedPick(List<T> items, ToDoubleFunction<T> weight, Random random)
+	{
+		double total = 0;
+		for (T item : items)
+		{
+			total += weight.applyAsDouble(item);
+		}
+		double r = random.nextDouble() * total;
+		for (T item : items)
+		{
+			r -= weight.applyAsDouble(item);
+			if (r < 0)
+			{
+				return item;
+			}
+		}
+		return items.get(items.size() - 1);
 	}
 
 	private static <T> T weightedRemove(List<T> items, ToDoubleFunction<T> weight, Random random)
